@@ -54,6 +54,7 @@ believed to work:
 - `mips-linux-musl`
 - `mips[el]-linux-musl[sf]`
 - `mips64[el]-linux-musl[n32][sf]`
+- `loongarch64-linux-musl[sf]`
 - `powerpc-linux-musl[sf]`
 - `powerpc64[le]-linux-musl`
 - `riscv64-linux-musl`
