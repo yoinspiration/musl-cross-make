@@ -81,6 +81,8 @@ LINUX_VER = 6.7
 
 GCC_CONFIG += --enable-languages=c,c++
 
+GCC_STRIP = true
+
 # You can keep the local build path out of your toolchain binaries and
 # target libraries with the following, but then gdb needs to be told
 # where to look for source files.
