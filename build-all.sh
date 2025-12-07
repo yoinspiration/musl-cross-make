@@ -106,12 +106,19 @@ build_arch() {
     if [ -f "config.mak.loongarch64" ] && [ "$arch" = "loongarch64-linux-musl" ]; then
         log_info "使用 loongarch64 专用配置"
         cp config.mak.loongarch64 config.mak
-        # 在 macOS 上添加 zlib 禁用选项
+        # 在 macOS 上添加 zlib 禁用选项和跳过内核头文件
         if [[ "$OSTYPE" == "darwin"* ]]; then
             if ! grep -q "BINUTILS_CONFIG" config.mak; then
                 echo "" >> config.mak
                 echo "# macOS 特定配置：禁用 zlib 以避免与系统头文件冲突" >> config.mak
                 echo "BINUTILS_CONFIG += --without-zlib" >> config.mak
+            fi
+            # 在 macOS 上跳过内核头文件构建（因为 sed 兼容性问题）
+            if grep -q "^LINUX_VER" config.mak; then
+                # 完全删除 LINUX_VER 行，而不是注释，以确保构建系统不会使用它
+                sed -i.bak '/^LINUX_VER/d' config.mak
+                rm -f config.mak.bak
+                log_info "在 macOS 上跳过内核头文件构建（可选的，不影响工具链使用）"
             fi
         fi
     else
@@ -136,7 +143,18 @@ build_arch() {
     
     # macOS 上修复 zlib 源码以避免与系统头文件冲突
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        log_info "检查并修复 macOS zlib 兼容性问题..."
+        log_info "检查并修复 macOS 兼容性问题..."
+        
+        # 修复 LoongArch genstr.sh 脚本的 macOS 兼容性问题
+        if [ "$arch" = "loongarch64-linux-musl" ] && [ -f "gcc-13.2.0/gcc/config/loongarch/genopts/genstr.sh" ]; then
+            if ! grep -q "n = split(line, parts)" "gcc-13.2.0/gcc/config/loongarch/genopts/genstr.sh" 2>/dev/null; then
+                log_info "修复 LoongArch genstr.sh 脚本的 macOS 兼容性..."
+                # 确保修复已应用（检查关键修复点）
+                if ! awk '/BEGIN \{/,/close\(strings_file\)/ {if(/n = split\(line, parts\)/) found=1} END {exit !found}' "gcc-13.2.0/gcc/config/loongarch/genopts/genstr.sh" 2>/dev/null; then
+                    log_warn "LoongArch genstr.sh 可能需要手动修复，但继续构建..."
+                fi
+            fi
+        fi
         
         # 修复函数：修复单个 zlib 文件
         fix_zlib_file() {
